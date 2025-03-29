@@ -10,4 +10,4 @@ inkwell = { version = "0.5.0", features = ["llvm16-0"] }
 anyhow = "1.0" # For error handling
 
 [build-dependencies]
-lalrpop = "0.22.1"
+lalrpop = "0.22.1"  
