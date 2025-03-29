@@ -1,0 +1,138 @@
+use crate::ast;
+use crate::lexer::Token;
+
+grammar;
+
+pub Program: ast::Program = {
+    <includes:Include*> <functions:Function*> => ast::Program {
+        includes,
+        functions
+    }
+};
+
+Include: ast::Statement = {
+    <path:IncludeFile> => ast::Statement::Include(path)
+};
+
+IncludeFile: String = {
+    "include" => match <> {
+        Token::Include(path) => path,
+        _ => unreachable!()
+    }
+};
+
+Function: ast::Function = {
+    <ret_type:Type> <name:Ident> "(" ")" "{" <body:Statement*> "}" => ast::Function {
+        return_type: ret_type,
+        name,
+        body
+    }
+};
+
+Type: ast::Type = {
+    "int" => ast::Type::Int,
+    "float" => ast::Type::Float
+};
+
+Statement: ast::Statement = {
+    <typ:Type> <name:Ident> "=" <expr:Expr> ";" => ast::Statement::Declare(typ, name, expr),
+    <name:Ident> "=" <expr:Expr> ";" => ast::Statement::Assign(name, expr),
+    "return" <expr:Expr> ";" => ast::Statement::Return(expr),
+    <path:IncludeFile> => ast::Statement::Include(path),
+    "printf" "(" <args:PrintArgs> ")" ";" => ast::Statement::Print(args),
+    "printf" "(" ")" ";" => ast::Statement::Print(vec![]),
+};
+
+PrintArgs: Vec<ast::Expr> = {
+    <arg:PrintArg> "," <args:PrintArgs> => {
+        let mut v = vec![arg];
+        v.extend(args);
+        v
+    },
+    <arg:PrintArg> => vec![arg],
+};
+
+#[inline]
+PrintArg: ast::Expr = {
+    <e:Expr> => e,
+    <s:StringLiteral> => ast::Expr::StringLiteral(s),
+};
+
+StringLiteral: String = {
+    "string_literal" => match <> {
+        Token::StringLiteral(s) => s,
+        _ => unreachable!(),
+    }
+};
+
+Expr: ast::Expr = {
+    <lhs:Expr> "+" <rhs:Term> => ast::Expr::Add(Box::new(lhs), Box::new(rhs)),
+    <lhs:Expr> "-" <rhs:Term> => ast::Expr::Sub(Box::new(lhs), Box::new(rhs)),
+    Term
+};
+
+Term: ast::Expr = {
+    <lhs:Term> "*" <rhs:Factor> => ast::Expr::Mul(Box::new(lhs), Box::new(rhs)),
+    <lhs:Term> "/" <rhs:Factor> => ast::Expr::Div(Box::new(lhs), Box::new(rhs)),
+    Factor
+};
+
+Factor: ast::Expr = {
+    "(" <Expr> ")",
+    <i:"int_literal"> => ast::Expr::IntLiteral(match i {
+        Token::IntLiteral(val) => val,
+        _ => unreachable!(),
+    }),
+    <f:"float_literal"> => ast::Expr::FloatLiteral(match f {
+        Token::FloatLiteral(val) => val,
+        _ => unreachable!(),
+    }),
+    <id:"identifier"> => ast::Expr::Variable(match id {
+        Token::Identifier(name) => name,
+        _ => unreachable!(),
+    }),
+};
+
+Ident: String = {
+    <id:"identifier"> => match id {
+        Token::Identifier(name) => name,
+        _ => unreachable!(),
+    }
+};
+
+extern {
+    type Location = usize;
+    type Error = String;
+
+    enum Token {
+        // Keywords
+        "int" => Token::Int,
+        "float" => Token::Float,
+        "return" => Token::Return,
+        
+        // Include directive
+        "include" => Token::Include(_),
+        
+        // Operators
+        "+" => Token::Plus,
+        "-" => Token::Minus,
+        "*" => Token::Star,
+        "/" => Token::FSlash,
+        "=" => Token::Equals,
+        
+        // Punctuation
+        "(" => Token::OParen,
+        ")" => Token::CParen,
+        "{" => Token::OBrace,
+        "}" => Token::CBrace,
+        ";" => Token::Semicolon,
+        "," => Token::Comma,
+        
+        // Tokens with values
+        "identifier" => Token::Identifier(_),
+        "int_literal" => Token::IntLiteral(_),
+        "float_literal" => Token::FloatLiteral(_),
+        "string_literal" => Token::StringLiteral(_),
+        "printf" => Token::Printf,
+    }
+}

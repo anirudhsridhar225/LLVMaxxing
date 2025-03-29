@@ -25,4 +25,8 @@ fn main() {
     //Lexical analysis
     let tokens = lexer::tokenize(&source_code);
     println!("Tokens: {:?}", tokens);
+
+    //parsing
+    let ast = parser::parse(&tokens).expect("Failed to parse tokens");
+    println!("AST: {:?}", ast);
 }

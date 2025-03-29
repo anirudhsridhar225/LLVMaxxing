@@ -343,6 +343,7 @@ dependencies = [
  "anyhow",
  "inkwell",
  "lalrpop",
+ "lalrpop-util",
  "logos",
 ]
 
