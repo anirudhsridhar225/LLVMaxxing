@@ -36,11 +36,21 @@ Type: ast::Type = {
 
 Statement: ast::Statement = {
     <typ:Type> <name:Ident> "=" <expr:Expr> ";" => ast::Statement::Declare(typ, name, expr),
+    <typ:Type> <name:Ident> ";" => {
+        // For declarations without initialization, use a default value based on the type
+        let default_expr = match typ {
+            ast::Type::Int => ast::Expr::IntLiteral(0),
+            ast::Type::Float => ast::Expr::FloatLiteral(0.0),
+        };
+        ast::Statement::Declare(typ, name, default_expr)
+    },
     <name:Ident> "=" <expr:Expr> ";" => ast::Statement::Assign(name, expr),
     "return" <expr:Expr> ";" => ast::Statement::Return(expr),
     <path:IncludeFile> => ast::Statement::Include(path),
     "printf" "(" <args:PrintArgs> ")" ";" => ast::Statement::Print(args),
     "printf" "(" ")" ";" => ast::Statement::Print(vec![]),
+    "scanf" "(" <args:ScanArgs> ")" ";" => ast::Statement::Scan(args),
+    "scanf" "(" ")" ";" => ast::Statement::Scan(vec![]),
 };
 
 PrintArgs: Vec<ast::Expr> = {
@@ -52,8 +62,23 @@ PrintArgs: Vec<ast::Expr> = {
     <arg:PrintArg> => vec![arg],
 };
 
+ScanArgs: Vec<ast::Expr> = {
+    <arg:ScanArg> "," <args:ScanArgs> => {
+        let mut v = vec![arg];
+        v.extend(args);
+        v
+    },
+    <arg:ScanArg> => vec![arg],
+};
+
 #[inline]
 PrintArg: ast::Expr = {
+    <e:Expr> => e,
+    <s:StringLiteral> => ast::Expr::StringLiteral(s),
+};
+
+#[inline]
+ScanArg: ast::Expr = {
     <e:Expr> => e,
     <s:StringLiteral> => ast::Expr::StringLiteral(s),
 };
@@ -134,5 +159,6 @@ extern {
         "float_literal" => Token::FloatLiteral(_),
         "string_literal" => Token::StringLiteral(_),
         "printf" => Token::Printf,
+        "scanf" => Token::Scanf,
     }
 }

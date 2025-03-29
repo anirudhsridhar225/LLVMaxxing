@@ -23,7 +23,7 @@ pub enum Statement {
     Assign(String, Expr),
     Return(Expr),
     Print(Vec<Expr>),
-
+    Scan(Vec<Expr>),
 }
 
 #[derive(Debug, Clone)]
